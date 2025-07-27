@@ -92,6 +92,9 @@ function test_if_and_else()
 end function
 
 
+
+
+# my test code
 name = input << "What is ur name> "
 
 print << "hello " << name << "\n"
