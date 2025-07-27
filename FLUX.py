@@ -31,6 +31,11 @@ class Lexer:
                     tokens.append(Token('NL'))
                 self.advance()
                 continue
+            # Skip comments
+            if c == '#':
+                while self.current_char is not None and self.current_char != '\n':
+                    self.advance()
+                continue
             # Multi-char operators
             if c == '<' and self.peek() == '<':
                 tokens.append(Token('LSHIFT','<<')); self.advance(); self.advance(); continue
