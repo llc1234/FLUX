@@ -19,7 +19,7 @@ function some_math(int how)
         print << "row: " << i << "\n"
 
         print << " - add       " << add(i, 5) << "\n"
-        print << " - multiplay " << multiplay(i, 5) << "\n"
+        print << " - multiplay " << multiplay(i, 5) << "\n\n"
     end for
 
 
