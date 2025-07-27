@@ -42,6 +42,10 @@ class Lexer:
                 tokens.append(Token('TIMESEQ','*=')); self.advance(); self.advance(); continue
             if c == '/' and self.peek() == '=':
                 tokens.append(Token('DIVEQ','/=')); self.advance(); self.advance(); continue
+            if c == '=' and self.peek() == '=':
+                tokens.append(Token('EQEQ','==')); self.advance(); self.advance(); continue
+            if c == '!' and self.peek() == '=':
+                tokens.append(Token('NOTEQ','!=')); self.advance(); self.advance(); continue
             # Number literal
             if c.isdigit():
                 num_str = ''
@@ -60,7 +64,7 @@ class Lexer:
                 while self.current_char and (self.current_char.isalnum() or self.current_char == '_'):
                     id_str += self.current_char
                     self.advance()
-                if id_str in ('function','end','for','while','if','return','print','input'):
+                if id_str in ('function','end','for','while','if','return','print','input','elif','else'):
                     tokens.append(Token('KEYWORD', id_str))
                 elif id_str == 'in':
                     tokens.append(Token('KEYWORD','in'))
@@ -223,13 +227,40 @@ class Parser:
         self.eat('KEYWORD','if')
         cond = self.parse_expression()
         if self.current.type=='NL': self.advance()
-        branch=[]
-        while not (self.current.type=='KEYWORD' and self.current.value=='end'):
+        
+        # Parse if branch
+        if_branch = []
+        while not (self.current.type=='KEYWORD' and self.current.value in ('elif','else','end')):
             if self.current.type=='NL': self.advance(); continue
-            branch.append(self.parse_statement())
-        self.eat('KEYWORD','end'); self.eat('KEYWORD','if')
+            if_branch.append(self.parse_statement())
+        
+        branches = [(cond, if_branch)]
+        
+        # Parse elif branches
+        while self.current.type=='KEYWORD' and self.current.value=='elif':
+            self.advance()  # consume 'elif'
+            cond_elif = self.parse_expression()
+            if self.current.type=='NL': self.advance()
+            branch_elif = []
+            while not (self.current.type=='KEYWORD' and self.current.value in ('elif','else','end')):
+                if self.current.type=='NL': self.advance(); continue
+                branch_elif.append(self.parse_statement())
+            branches.append((cond_elif, branch_elif))
+        
+        # Parse else branch
+        else_branch = []
+        if self.current.type=='KEYWORD' and self.current.value=='else':
+            self.advance()  # consume 'else'
+            if self.current.type=='NL': self.advance()
+            while not (self.current.type=='KEYWORD' and self.current.value=='end'):
+                if self.current.type=='NL': self.advance(); continue
+                else_branch.append(self.parse_statement())
+        
+        # Consume end if
+        self.eat('KEYWORD','end')
+        self.eat('KEYWORD','if')
         if self.current.type=='NL': self.advance()
-        return ('IF', cond, branch)
+        return ('IF', branches, else_branch)
     
     def parse_while(self):
         self.eat('KEYWORD','while')
@@ -283,7 +314,7 @@ class Parser:
             right = self.parse_term()
             node = ('BINOP', op, node, right)
         # After arithmetic, check for comparison
-        if self.current.type in ('LT','GT'):
+        if self.current.type in ('LT','GT','EQEQ','NOTEQ'):
             op = self.current.value
             self.advance()
             right = self.parse_term()
@@ -442,9 +473,17 @@ class Interpreter:
                 out_str += str(v) if v is not None else ''
             print(out_str, end='')
         elif typ == 'IF':
-            _, cond, branch = node
-            if self.eval(cond):
-                for stmt in branch:
+            _, branches, else_branch = node
+            executed = False
+            for cond, body in branches:
+                if self.eval(cond):
+                    for stmt in body:
+                        self.exec(stmt)
+                    executed = True
+                    break
+            
+            if not executed:
+                for stmt in else_branch:
                     self.exec(stmt)
         elif typ == 'WHILE':
             _, cond, body = node
@@ -516,6 +555,8 @@ class Interpreter:
             l = self.eval(left); r = self.eval(right)
             if op == '<': return l < r
             if op == '>': return l > r
+            if op == '==': return l == r
+            if op == '!=': return l != r
         elif typ == 'UMINUS':
             return -self.eval(node[1])
         elif typ == 'SLICE':
