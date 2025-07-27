@@ -52,7 +52,7 @@ function some_while()
 
     while running
         i += 1
-        if i > 1000
+        if i == 1000
             print << "out off while loop" << "\n"
             running = false
         end if
@@ -76,7 +76,19 @@ function edite_strings(string nam)
     new_string += "4"
     new_string += "5"
 
-    print << new_string[0:5] << "\n"
+    print << new_string << "\n"
+end function
+
+function test_if_and_else()
+    int i = 1
+
+    if i == 5
+        print << "i is 5\n"
+    elif i > 5
+        print << "is higher then 5\n"
+    elif i < 5
+        print << "is lower then 5\n"
+    end if
 end function
 
 
@@ -95,3 +107,6 @@ some_while()
 
 print << "------ test string ------\n"
 edite_strings("1234567890")
+
+print << "------ test if and else ------\n"
+test_if_and_else()
